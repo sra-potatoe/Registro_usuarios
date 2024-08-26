@@ -12,12 +12,19 @@ class HomeScreen extends StatelessWidget {
     final User? user = FirebaseAuth.instance.currentUser;
 
     if (user == null || (user.providerData.every((info) => info.providerId != "facebook.com") && !user.emailVerified)) {
-      // Usamos WidgetsBinding para evitar la redirección en el build.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const SignInScreen()),
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Por favor, verifica tu correo electrónico.'),
+          ),
         );
+        // Si quieres redirigir a la pantalla de inicio de sesión después de mostrar el SnackBar
+        Future.delayed(const Duration(seconds: 2), () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const SignInScreen()),
+          );
+        });
       });
       return Scaffold(
         body: Center(child: CircularProgressIndicator()),

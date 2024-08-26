@@ -25,33 +25,32 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  Future<void> _signUpWithEmail() async {
-    try {
-      await context.read<AuthenticationService>().signUpWithEmail(
-            email: emailController.text.trim(),
-            password: passwordController.text.trim(),
-            name: nameController.text.trim(),
-          );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text(
-                  'Registro exitoso. Verifica tu correo electrónico para completar el registro.')),
+Future<void> _signUpWithEmail() async {
+  try {
+    await context.read<AuthenticationService>().signUpWithEmail(
+          email: emailController.text.trim(),
+          password: passwordController.text.trim(),
+          name: nameController.text.trim(),
         );
-      }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Registro exitoso. Verifica tu correo electrónico para completar el registro.')),
+      );
 
       // Mostrar un diálogo pidiendo que confirme su correo
       await _showVerificationDialog();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
   }
-
+}
+ 
   Future<void> _signUpWithGoogle() async {
     try {
       await context.read<AuthenticationService>().signInWithGoogle();

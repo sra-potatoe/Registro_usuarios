@@ -7,8 +7,6 @@ class AuthenticationService {
 
   AuthenticationService({FirebaseAuth? firebaseAuth})
       : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance;
-
-  // Getter para authStateChanges
   Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
 
   Future<void> signUpWithEmail({
@@ -17,34 +15,42 @@ class AuthenticationService {
     required String name,
   }) async {
     try {
-      final UserCredential userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
+      UserCredential userCredential =
+          await _firebaseAuth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      final User user = userCredential.user!;
-      await user.updateProfile(displayName: name);
-      await user.sendEmailVerification();
+      await userCredential.user!.updateDisplayName(name);
+      await userCredential.user!.sendEmailVerification();
 
       // Deslogea hasta que el correo esté verificado
       await _firebaseAuth.signOut();
-      print('Por favor, verifica tu correo electrónico antes de iniciar sesión.');
+      // Solo muestra el mensaje en lugar de lanzar la excepción
+      print(
+          'Por favor, verifica tu correo electrónico antes de iniciar sesión.');
     } on FirebaseAuthException catch (e) {
       String message;
+
       switch (e.code) {
         case 'email-already-in-use':
-          message = 'El correo electrónico ya está en uso. Por favor, utiliza otro correo o inicia sesión.';
+          message =
+              'El correo electrónico ya está en uso. Por favor, utiliza otro correo o inicia sesión.';
           break;
         case 'too-many-requests':
-          message = 'Hemos bloqueado todas las solicitudes desde este dispositivo debido a actividad inusual. Intenta de nuevo más tarde.';
+          message =
+              'Hemos bloqueado todas las solicitudes desde este dispositivo debido a actividad inusual. Intenta de nuevo más tarde.';
           break;
         default:
-          message = 'Ocurrió un error. Por favor, intenta nuevamente.';
+          message = 'Credenciales incorrectas, ingresa nuevamente tus datoss';
           break;
       }
-      throw FirebaseAuthException(code: e.code, message: message);
+
+      throw FirebaseAuthException(
+        code: e.code,
+        message: message,
+      );
     } catch (e) {
-      print('Error desconocido: $e');
       rethrow;
     }
   }
@@ -54,18 +60,21 @@ class AuthenticationService {
     required String password,
   }) async {
     try {
-      final UserCredential userCredential = await _firebaseAuth.signInWithEmailAndPassword(
+      UserCredential userCredential =
+          await _firebaseAuth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      final User user = userCredential.user!;
-      if (!user.emailVerified) {
+      if (!userCredential.user!.emailVerified) {
         await _firebaseAuth.signOut();
-        print('Por favor, verifica tu correo electrónico antes de iniciar sesión.');
+        // Solo muestra el mensaje en lugar de lanzar la excepción
+        print(
+            'Por favor, verifica tu correo electrónico antes de iniciar sesión.');
       }
     } on FirebaseAuthException catch (e) {
       String message;
+
       switch (e.code) {
         case 'user-not-found':
           message = 'No se encontró una cuenta con ese correo electrónico.';
@@ -77,9 +86,12 @@ class AuthenticationService {
           message = 'Ocurrió un error. Por favor, intenta nuevamente.';
           break;
       }
-      throw FirebaseAuthException(code: e.code, message: message);
+
+      throw FirebaseAuthException(
+        code: e.code,
+        message: message,
+      );
     } catch (e) {
-      print('Error desconocido: $e');
       rethrow;
     }
   }
@@ -88,20 +100,24 @@ class AuthenticationService {
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
       if (googleUser != null) {
-        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
         final OAuthCredential credential = GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
         );
-        final UserCredential userCredential = await _firebaseAuth.signInWithCredential(credential);
-        final User user = userCredential.user!;
-        if (!user.emailVerified) {
+        await _firebaseAuth.signInWithCredential(credential);
+        User? user = _firebaseAuth.currentUser;
+        await user?.reload();
+        user = _firebaseAuth.currentUser;
+        if (!user!.emailVerified) {
           await _firebaseAuth.signOut();
-          print('Por favor, verifica tu correo electrónico antes de iniciar sesión.');
+          // Solo muestra el mensaje en lugar de lanzar la excepción
+          print(
+              'Por favor, verifica tu correo electrónico antes de iniciar sesión.');
         }
       }
     } catch (e) {
-      print('Error de autenticación con Google: $e');
       rethrow;
     }
   }
@@ -110,28 +126,44 @@ class AuthenticationService {
     try {
       final LoginResult result = await FacebookAuth.instance.login();
       if (result.status == LoginStatus.success) {
-        final OAuthCredential credential = FacebookAuthProvider.credential(result.accessToken!.tokenString);
-        final UserCredential userCredential = await _firebaseAuth.signInWithCredential(credential);
-        final User user = userCredential.user!;
-        // No es necesario verificar el correo para Facebook
+        final OAuthCredential credential =
+            FacebookAuthProvider.credential(result.accessToken!.tokenString);
+        await _firebaseAuth.signInWithCredential(credential);
+
+        // No se verifica el correo electrónico para usuarios de Facebook
+        User? user = _firebaseAuth.currentUser;
+        await user?.reload();
+        user = _firebaseAuth.currentUser;
+
+        // Redirigir al usuario a HomeScreen si ya está autenticado
+        if (user != null) {
+          // La sesión debería persistir aquí
+        } else {
+          throw FirebaseAuthException(
+              code: 'facebook-auth-failed',
+              message: 'Error al autenticar con Facebook.');
+        }
       } else {
         throw FirebaseAuthException(
             code: 'facebook-auth-failed',
             message: 'Error al autenticar con Facebook: ${result.message}');
       }
     } catch (e) {
-      print('Error de autenticación con Facebook: $e');
       rethrow;
     }
   }
 
   Future<void> signOut() async {
     try {
+      // Cierra sesión en Firebase
       await _firebaseAuth.signOut();
+
+      // Cierra sesión en Google
       await GoogleSignIn().signOut();
+
+      // Cierra sesión en Facebook
       await FacebookAuth.instance.logOut();
     } catch (e) {
-      print('Error al cerrar sesión: $e');
       rethrow;
     }
   }
@@ -141,7 +173,7 @@ class AuthenticationService {
   }
 
   Future<void> sendVerificationEmail() async {
-    final User? user = _firebaseAuth.currentUser;
+    User? user = _firebaseAuth.currentUser;
     if (user != null && !user.emailVerified) {
       await user.sendEmailVerification();
     }

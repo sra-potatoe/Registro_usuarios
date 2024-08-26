@@ -52,6 +52,16 @@ class AuthenticationWrapper extends StatelessWidget {
           info.providerId == "password" || info.providerId == "google.com");
 
       if (isEmailSignIn && !user.emailVerified) {
+        // Mostrar el mensaje de verificación
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Por favor, verifica tu correo electrónico.'),
+            ),
+          );
+        });
+
+        // Mostrar la pantalla de verificación con la opción de reenvío de correo
         return Scaffold(
           body: Center(
             child: Column(
@@ -65,6 +75,11 @@ class AuthenticationWrapper extends StatelessWidget {
                       await context
                           .read<AuthenticationService>()
                           .sendVerificationEmail();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Correo de verificación reenviado.'),
+                        ),
+                      );
                     }
                   },
                   child: const Text('Reenviar correo de verificación'),
@@ -93,6 +108,7 @@ class AuthenticationWrapper extends StatelessWidget {
     return const SignUpScreen();
   }
 }
+
 
 
 
